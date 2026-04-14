@@ -85,26 +85,6 @@ def get_menu_choice():
             return None  # ✅ None 반환으로 종료 신호
 
 
-def handle_menu(choice):
-    """선택한 메뉴를 처리하는 함수"""
-    if choice is None:  # ✅ None 체크
-        return False
-    
-    if choice == '1':
-        print("\n 퀴즈 풀기 기능 (준비 중)")
-    elif choice == '2':
-        print("\n 퀴즈 추가 기능 (준비 중)")
-    elif choice == '3':
-        print("\n 퀴즈 목록 기능 (준비 중)")
-    elif choice == '4':
-        print("\n 점수 확인 기능 (준비 중)")
-    elif choice == '5':
-        print("\n 프로그램을 종료합니다.")
-        return False  # 프로그램 종료 신호
-    
-    return True  # 프로그램 계속 실행
-
-
 # ============= 데이터 관리 함수 =============
 
 def get_default_quizzes():
@@ -181,6 +161,141 @@ def save_quiz_data(quizzes, filename="data.json"):
         print(f"⚠️ 예상치 못한 오류: {e}")
 
 
+# ============= Quiz 클래스 및 추가 기능 =============
+
+class Quiz:
+    """개별 퀴즈를 표현하는 클래스"""
+    def __init__(self, question, choices, answer, qid=None):
+        # 기본 유효성 검사
+        if not isinstance(question, str) or not question.strip():
+            raise ValueError("문제는 비어있을 수 없습니다.")
+        if not isinstance(choices, list) or len(choices) != 4:
+            raise ValueError("선택지는 정확히 4개여야 합니다.")
+        if not isinstance(answer, int) or not (1 <= answer <= 4):
+            raise ValueError("정답은 1~4 사이의 정수여야 합니다.")
+        self.id = qid
+        self.question = question.strip()
+        self.choices = [c.strip() for c in choices]
+        self.answer = answer
+
+    def display(self):
+        """문제와 선택지를 출력"""
+        print(f"\n[문제] {self.question}")
+        for i, ch in enumerate(self.choices, start=1):
+            print(f"  {i}) {ch}")
+
+    def is_correct(self, user_choice):
+        """사용자 선택이 정답인지 확인 (정수 1~4 기대)"""
+        return user_choice == self.answer
+
+    def get_correct_text(self):
+        """정답 텍스트 반환"""
+        return self.choices[self.answer - 1]
+
+    def to_dict(self):
+        """파일 저장용 딕셔너리 반환"""
+        return {
+            "id": self.id,
+            "question": self.question,
+            "choices": self.choices,
+            "answer": self.answer
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        """딕셔너리로부터 Quiz 객체 생성"""
+        return cls(
+            question=d["question"],
+            choices=d["choices"],
+            answer=d["answer"],
+            qid=d.get("id")
+        )
+
+
+def next_id(quizzes):
+    """현재 quizzes(dict 리스트)를 보고 다음 id 계산"""
+    if not quizzes:
+        return 1
+    ids = []
+    for q in quizzes:
+        try:
+            ids.append(int(q.get("id") or 0))
+        except Exception:
+            ids.append(0)
+    return max(ids, default=0) + 1
+
+
+def add_quiz(quizzes, filename="data.json"):
+    """
+    퀴즈를 입력받아 quizzes 리스트에 추가하고 파일에 저장.
+    입력 도중 Ctrl+C/Ctrl+D 발생하면 작업을 취소하고 복귀합니다.
+    """
+    print("\n=== 퀴즈 추가 ===")
+    # 문제 입력
+    question = get_string_input("문제 내용을 입력하세요: ")
+    if question is None:
+        print("입력 취소: 프로그램으로 복귀합니다.")
+        return False
+
+    # 선택지 4개 입력
+    choices = []
+    for i in range(1, 5):
+        ch = get_string_input(f"선택지 {i} 입력: ")
+        if ch is None:
+            print("입력 취소: 프로그램으로 복귀합니다.")
+            return False
+        choices.append(ch)
+
+    # 정답 입력 (1-4)
+    answer = get_integer_input("정답 번호를 입력하세요 (1-4): ", 1, 4)
+    if answer is None:
+        print("입력 취소: 프로그램으로 복귀합니다.")
+        return False
+
+    # id 부여 및 객체 생성
+    qid = next_id(quizzes)
+    try:
+        quiz = Quiz(question=question, choices=choices, answer=answer, qid=qid)
+    except ValueError as e:
+        print(f"오류: {e}")
+        return False
+
+    # dict 형식으로 목록에 추가하고 저장
+    quizzes.append(quiz.to_dict())
+    save_quiz_data(quizzes, filename)
+    print(f"✅ 퀴즈가 추가되었습니다. id={qid}")
+    return True
+
+
+# ============= 메뉴 처리 (quizzes 전달) =============
+
+def handle_menu(choice, quizzes, filename="data.json"):
+    """선택한 메뉴를 처리하는 함수 (quizzes 리스트를 직접 수정)"""
+    if choice is None:
+        return False
+
+    if choice == '1':
+        print("\n 퀴즈 풀기 기능 (준비 중)")
+    elif choice == '2':
+        add_quiz(quizzes, filename)
+    elif choice == '3':
+        print("\n=== 퀴즈 목록 ===")
+        if not quizzes:
+            print("퀴즈가 없습니다.")
+        else:
+            for q in quizzes:
+                qid = q.get("id") if isinstance(q, dict) else getattr(q, "id", None)
+                question = q.get("question") if isinstance(q, dict) else getattr(q, "question", "")
+                print(f"id={qid}: {question}")
+    elif choice == '4':
+        print("\n 점수 확인 기능 (준비 중)")
+    elif choice == '5':
+        print("\n 프로그램을 종료합니다.")
+        return False  # 프로그램 종료 신호
+    
+    return True  # 프로그램 계속 실행
+
+
 # ============= 메인 함수 =============
 
 def main():
@@ -188,7 +303,8 @@ def main():
     print("\n프로그램을 시작합니다...\n")
     
     # 데이터 로드
-    quizzes = load_quiz_data("data.json")
+    filename = "data.json"
+    quizzes = load_quiz_data(filename)
     
     try:
         while True:
@@ -199,8 +315,8 @@ def main():
             if choice is None:  # ✅ None 감지
                 break
             
-            # 메뉴 처리
-            if not handle_menu(choice):
+            # 메뉴 처리 (quizzes 전달)
+            if not handle_menu(choice, quizzes, filename):
                 break
     
     except (KeyboardInterrupt, EOFError):
@@ -209,7 +325,7 @@ def main():
     
     finally:  # ✅ 항상 실행 - 안전한 종료 보장
         print("\n⚠️ 프로그램을 종료합니다.")
-        save_quiz_data(quizzes, "data.json")
+        save_quiz_data(quizzes, filename)
         print("데이터가 저장되었습니다.")
 
 
