@@ -183,24 +183,42 @@ def save_quiz_data(quizzes, filename="data.json"):
 # ============= 기능 구현 =============
 
 def solve_quiz(quizzes):
-    """퀴즈를 풀고 점수를 반환"""
-    score = 0
+    """퀴즈를 순차적으로 출제하고 결과를 반환하는 함수"""
     
-    for quiz in quizzes:
+    # ✅ 퀴즈 없음 처리
+    if not quizzes:
+        print("\n⚠️ 퀴즈가 없습니다.")
+        return None
+
+    score = 0
+    total = len(quizzes)
+
+    print("\n=== 퀴즈 시작 ===")
+
+    for idx, quiz in enumerate(quizzes, start=1):
+        print(f"\n[{idx}/{total}]")
         quiz.display()
+
         choice = get_integer_input("답을 선택하세요 (1-4): ", 1, 4)
-        
+
+        # ✅ 입력 중단 처리
         if choice is None:
-            print("퀴즈가 중단되었습니다.")
+            print("\n퀴즈가 중단되었습니다.")
             return None
-        
+
+        # ✅ 정답 확인
         if quiz.is_correct(choice):
-            print("정답입니다!")
+            print("✅ 정답입니다!")
             score += 1
         else:
-            print(f"오답입니다! 정답: {quiz.get_correct_text()}")
-    
-    print(f"\n총 점수: {score}/{len(quizzes)}")
+            print(f"❌ 오답입니다! 정답: {quiz.get_correct_text()}")
+
+    # ✅ 결과 출력
+    print("\n=== 결과 ===")
+    print(f"총 문제 수: {total}")
+    print(f"정답 수: {score}")
+    print(f"점수: {score}/{total}")
+
     return score
 
 
