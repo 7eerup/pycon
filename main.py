@@ -161,7 +161,7 @@ def save_quiz_data(quizzes, filename="data.json"):
         pass
 
 
-# ============= 퀴즈 풀기만 유지 =============
+# ============= 기능 구현 =============
 
 def solve_quiz(quizzes):
     if not quizzes:
@@ -186,6 +186,44 @@ def solve_quiz(quizzes):
     print(f"\n점수: {score}/{len(quizzes)}")
     return score
 
+def add_quiz(quizzes, filename="data.json"):
+    """퀴즈를 추가하고 파일에 저장하는 함수"""
+    print("\n=== 퀴즈 추가 ===")
+
+    # 문제 입력
+    question = get_string_input("문제 내용을 입력하세요: ")
+    if question is None:
+        print("입력 취소")
+        return
+
+    # 선택지 입력
+    choices = []
+    for i in range(1, 5):
+        choice = get_string_input(f"선택지 {i}: ")
+        if choice is None:
+            print("입력 취소")
+            return
+        choices.append(choice)
+
+    # 정답 입력
+    answer = get_integer_input("정답 번호 (1-4): ", 1, 4)
+    if answer is None:
+        print("입력 취소")
+        return
+
+    # id 생성
+    next_id = max([q.id for q in quizzes], default=0) + 1
+
+    try:
+        quiz = Quiz(question, choices, answer, next_id)
+    except ValueError as e:
+        print(f"오류: {e}")
+        return
+
+    quizzes.append(quiz)
+    save_quiz_data(quizzes, filename)
+
+    print(f"✅ 퀴즈 추가 완료 (id={next_id})")
 
 # ============= 메인 =============
 
@@ -206,7 +244,7 @@ def main():
                 solve_quiz(quizzes)
             
             elif choice == '2':
-                print("\n⚠️ 퀴즈 추가 기능은 현재 비활성화되어 있습니다.")
+                add_quiz(quizzes)
             
             elif choice == '3':
                 print("\n⚠️ 퀴즈 목록 기능은 현재 비활성화되어 있습니다.")

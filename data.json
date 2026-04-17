@@ -53,5 +53,16 @@
       "function"
     ],
     "answer": 3
+  },
+  {
+    "id": 6,
+    "question": "파이썬의 자료형이 아닌 것은?",
+    "choices": [
+      "int",
+      "str",
+      "float",
+      "char"
+    ],
+    "answer": 4
   }
 ]
