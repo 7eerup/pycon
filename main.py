@@ -190,40 +190,32 @@ def add_quiz(quizzes, filename="data.json"):
     """퀴즈를 추가하고 파일에 저장하는 함수"""
     print("\n=== 퀴즈 추가 ===")
 
-    # 문제 입력
     question = get_string_input("문제 내용을 입력하세요: ")
     if question is None:
         print("입력 취소")
         return
 
-    # 선택지 입력
     choices = []
     for i in range(1, 5):
         choice = get_string_input(f"선택지 {i}: ")
-        if choice is None:
-            print("입력 취소")
+        if choice is None or not choice.strip():
+            print("선택지는 비어 있을 수 없습니다.")
             return
         choices.append(choice)
 
-    # 정답 입력
     answer = get_integer_input("정답 번호 (1-4): ", 1, 4)
     if answer is None:
         print("입력 취소")
         return
 
-    # id 생성
-    next_id = max([q.id for q in quizzes], default=0) + 1
+    new_id = max([q.id for q in quizzes if hasattr(q, 'id')], default=0) + 1
 
-    try:
-        quiz = Quiz(question, choices, answer, next_id)
-    except ValueError as e:
-        print(f"오류: {e}")
-        return
+    quiz = Quiz(question, choices, answer, new_id)
 
     quizzes.append(quiz)
     save_quiz_data(quizzes, filename)
 
-    print(f"✅ 퀴즈 추가 완료 (id={next_id})")
+    print(f"✅ 퀴즈 추가 완료 (id={new_id})")
 
 # ============= 메인 =============
 
