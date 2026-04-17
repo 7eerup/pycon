@@ -109,6 +109,10 @@ class Quiz:
     def get_correct_text(self):
         """정답 텍스트 반환"""
         return self.choices[self.answer - 1]
+    
+    def summary(self):
+        """퀴즈 목록용 한 줄 출력"""
+        return f"id={self.id}: {self.question}"
 
     def to_dict(self):
         return {
@@ -217,6 +221,19 @@ def add_quiz(quizzes, filename="data.json"):
 
     print(f"✅ 퀴즈 추가 완료 (id={new_id})")
 
+def show_quizzes(quizzes):
+    """저장된 퀴즈 목록을 출력하는 함수"""
+    print("\n=== 퀴즈 목록 ===")
+
+    if not quizzes:
+        print("⚠️ 등록된 퀴즈가 없습니다.")
+        return
+
+    for quiz in quizzes:
+        print(quiz.summary())
+
+
+
 # ============= 메인 =============
 
 def main():
@@ -239,7 +256,7 @@ def main():
                 add_quiz(quizzes)
             
             elif choice == '3':
-                print("\n⚠️ 퀴즈 목록 기능은 현재 비활성화되어 있습니다.")
+                show_quizzes(quizzes)
             
             elif choice == '4':
                 print("\n⚠️ 점수 확인 기능은 현재 비활성화되어 있습니다.")
