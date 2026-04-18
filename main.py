@@ -105,56 +105,60 @@ def get_default_quizzes():
         Quiz("함수 정의 키워드는?", ["func", "define", "def", "function"], 3, 5)
     ]
 
+# ============= 상태 관리 =============
 
-# ============= 데이터 관리 =============
-
-def load_quiz_data(filename="data.json"):
+def load_state(filename="state.json"):
+    """전체 상태를 로드"""
     try:
         if not os.path.exists(filename):
             quizzes = get_default_quizzes()
-            save_quiz_data(quizzes, filename)
-            return quizzes
-        
-        with open(filename, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            return [Quiz.from_dict(q) for q in data]
-    
-    except Exception:
-        return get_default_quizzes()
-
-
-def save_quiz_data(quizzes, filename="data.json"):
-    try:
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump([q.to_dict() for q in quizzes], f, ensure_ascii=False, indent=2)
-    except Exception:
-        pass
-
-# ============= 점수 관리 함수 =============
-
-def load_score(filename="score.json"):
-    """점수 데이터 로드"""
-    try:
-        if not os.path.exists(filename):
-            return {"best": None, "last": None}
-        
-        with open(filename, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            save_state(quizzes, best_score=None, last_score=None, filename=filename)
             return {
+                "quizzes": quizzes,
+                "best": None,
+                "last": None
+            }
+
+        with open(filename, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+            quizzes_data = data.get("quizzes")
+
+            if quizzes_data is None:
+                quizzes = get_default_quizzes()
+            else:
+                quizzes = [Quiz.from_dict(q) for q in quizzes_data]
+
+            return {
+                "quizzes": quizzes,
                 "best": data.get("best_score"),
                 "last": data.get("last_score")
             }
+
     except Exception:
-        return {"best": None, "last": None}
+        print("⚠️ state.json 손상 → 초기화")
+        quizzes = get_default_quizzes()
+        save_state(quizzes, None, None, filename)
+        return {
+            "quizzes": quizzes,
+            "best": None,
+            "last": None
+        }
 
-
-def save_score(best, last, filename="score.json"):
-    """최고 점수를 저장하는 함수"""
+def save_state(quizzes, best_score, last_score, filename="state.json"):
+    """전체 상태를 파일에 저장"""
     try:
+        data = {
+            "quizzes": [q.to_dict() for q in quizzes],
+            "best_score": best_score,
+            "last_score": last_score
+        }
+
         with open(filename, 'w', encoding='utf-8') as f:
-            json.dump({"best_score": best, "last_score": last}, f, ensure_ascii=False, indent=2)
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
     except Exception as e:
-        print(f"⚠️ 점수 저장 실패: {e}")
+        print(f"⚠️ 상태 저장 실패: {e}")
 
 
 # ============= QuizGame 클래스 =============
@@ -164,8 +168,7 @@ class QuizGame:
 
     def __init__(self):
         """초기 데이터 로드"""
-        self.quiz_file = "data.json"
-        self.score_file = "score.json"
+        self.state_file = "state.json"
 
         self.quizzes = []
         self.score_data = {"best": None, "last": None}
@@ -206,35 +209,38 @@ class QuizGame:
         
     # ---------- 데이터 로드 ----------
     def load_data(self):
-        try:
-            self.quizzes = load_quiz_data(self.quiz_file)
-            self.score_data = load_score(self.score_file)
-        except Exception as e:
-            print(f"⚠️ 데이터 로드 실패: {e}")
+        """state.json 파일에서 퀴즈 및 점수 데이터를 불러온다."""
+        state = load_state(self.state_file)
+        self.quizzes = state["quizzes"]
+        self.score_data["best"] = state["best"]
+        self.score_data["last"] = state["last"]
 
     # ---------- 데이터 저장 ----------
     def save_data(self):
-        """데이터 저장"""
-        save_quiz_data(self.quizzes, self.quiz_file)
-        save_score(
+        """현재 퀴즈와 점수 상태를 파일에 저장한다."""
+        save_state(
+            self.quizzes,
             self.score_data["best"],
             self.score_data["last"],
-            self.score_file
+            self.state_file
         )
 
     # ---------- 퀴즈 풀기 ----------
     def solve_quiz(self):
+        """퀴즈를 순차적으로 출제하고 사용자 답안을 채점"""
         if not self.quizzes:
             print("\n⚠️ 퀴즈가 없습니다.")
             return
 
         score = 0
 
-        for quiz in self.quizzes:
+        for idx, quiz in enumerate(self.quizzes, 1):
+            print(f"\n[{idx}/{len(self.quizzes)}]")
             quiz.display()
             choice = get_integer_input("답: ", 1, 4)
 
             if choice is None:
+                print("\n⚠️ 퀴즈가 중단되었습니다.")
                 return
 
             if quiz.is_correct(choice):
@@ -247,7 +253,7 @@ class QuizGame:
 
     # ---------- 점수 갱신 ----------    
     def update_score(self, score):
-        """점수 갱신"""
+        """점수 갱신 최고 점수 비교"""
         total = len(self.quizzes)
         print(f"\n점수: {score}/{total}")
 
@@ -258,11 +264,13 @@ class QuizGame:
             best = score
             print("🎉 최고 점수 갱신!")
 
-        self.score_data = {"best": best, "last": last}
+        self.score_data["best"] = best
+        self.score_data["last"] = last
         self.save_data()
 
     # ---------- 퀴즈 추가 ----------
     def add_quiz(self):
+        """사용자 입력을 받아 새로운 퀴즈 생성 저장"""
         print("\n=== 퀴즈 추가 ===")
 
         question = get_string_input("문제 내용을 입력하세요: ")
@@ -283,7 +291,8 @@ class QuizGame:
             print("입력 취소")
             return
 
-        new_id = max([q.id for q in self.quizzes if q.id is not None], default=0) + 1
+        existing_ids = [q.id for q in self.quizzes if isinstance(q.id, int)]
+        new_id = (max(existing_ids) + 1) if existing_ids else 1
 
         quiz = Quiz(question, choices, answer, new_id)
 
@@ -294,6 +303,7 @@ class QuizGame:
 
     # ---------- 퀴즈 목록 ----------
     def show_quizzes(self):
+        """저장된 모든 퀴즈 목록을 출력"""
         print("\n=== 퀴즈 목록 ===")
 
         if not self.quizzes:
@@ -305,6 +315,7 @@ class QuizGame:
 
     # ---------- 점수 ----------
     def show_scores(self):
+        """이전 점수와 최고 점수를 출력"""
         print("\n=== 점수 정보 ===")
 
         best = self.score_data["best"]
