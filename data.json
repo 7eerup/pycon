@@ -53,16 +53,5 @@
       "function"
     ],
     "answer": 3
-  },
-  {
-    "id": 6,
-    "question": "다음 중 파이썬 자료형 아닌 것은?",
-    "choices": [
-      "int",
-      "str",
-      "float",
-      "char"
-    ],
-    "answer": 4
   }
 ]

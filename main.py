@@ -44,42 +44,6 @@ def get_string_input(prompt, allow_empty=False):
         except (KeyboardInterrupt, EOFError):
             return None
 
-
-# ============= 메뉴 함수 =============
-
-def display_menu():
-    """메뉴를 출력하는 함수"""
-    print("\n" + "="*40)
-    print("퀴즈 프로그램에 오신 것을 환영합니다!")
-    print("="*40)
-    print("1. 퀴즈 풀기")
-    print("2. 퀴즈 추가")
-    print("3. 퀴즈 목록")
-    print("4. 점수 확인")
-    print("5. 종료")
-    print("="*40)
-
-
-def get_menu_choice():
-    """메뉴 선택을 받는 함수"""
-    while True:
-        try:
-            choice = input("원하는 기능을 선택하세요 (1-5): ").strip()
-            
-            if not choice:
-                print("오류: 입력이 비어있습니다. 다시 입력하세요.")
-                continue
-            
-            if choice not in ['1', '2', '3', '4', '5']:
-                print("오류: 1부터 5 사이의 숫자를 입력하세요.")
-                continue
-            
-            return choice
-        
-        except (KeyboardInterrupt, EOFError):
-            return None
-
-
 # ============= Quiz 클래스 =============
 
 class Quiz:
@@ -115,6 +79,7 @@ class Quiz:
         return f"id={self.id}: {self.question}"
 
     def to_dict(self):
+        """Quiz 객체를 JSON 저장용 딕셔너리로 변환"""
         return {
             "id": self.id,
             "question": self.question,
@@ -124,6 +89,7 @@ class Quiz:
 
     @classmethod
     def from_dict(cls, d):
+        """딕셔너리 데이터를 Quiz 객체로 변환"""
         return cls(d["question"], d["choices"], d["answer"], d.get("id"))
 
 
@@ -190,143 +156,209 @@ def save_score(best, last, filename="score.json"):
     except Exception as e:
         print(f"⚠️ 점수 저장 실패: {e}")
 
-# ============= 기능 구현 =============
 
-def solve_quiz(quizzes):
-    if not quizzes:
-        print("\n⚠️ 퀴즈가 없습니다.")
-        return None
+# ============= QuizGame 클래스 =============
 
-    score = 0
+class QuizGame:
+    """퀴즈 게임 전체를 관리하는 클래스"""
 
-    for quiz in quizzes:
-        quiz.display()
-        choice = get_integer_input("답: ", 1, 4)
+    def __init__(self):
+        """초기 데이터 로드"""
+        self.quiz_file = "data.json"
+        self.score_file = "score.json"
 
-        if choice is None:
-            return None
+        self.quizzes = []
+        self.score_data = {"best": None, "last": None}
 
-        if quiz.is_correct(choice):
-            print("정답!")
-            score += 1
-        else:
-            print(f"오답! 정답: {quiz.get_correct_text()}")
+        self.load_data()
 
-    print(f"\n점수: {score}/{len(quizzes)}")
-    return score
+    # ---------- 메뉴 ----------
+    def display_menu(self):
+        print("\n" + "="*40)
+        print("퀴즈 프로그램에 오신 것을 환영합니다!")
+        print("="*40)
+        print("1. 퀴즈 풀기")
+        print("2. 퀴즈 추가")
+        print("3. 퀴즈 목록")
+        print("4. 점수 확인")
+        print("5. 종료")
+        print("="*40)
 
-def add_quiz(quizzes, filename="data.json"):
-    """퀴즈를 추가하고 파일에 저장하는 함수"""
-    print("\n=== 퀴즈 추가 ===")
+    def get_menu_choice(self):
+        """메뉴 선택을 받는 함수"""
+        while True:
+            try:
+                choice = input("원하는 기능을 선택하세요 (1-5): ").strip()
+                
+                if not choice:
+                    print("오류: 입력이 비어있습니다. 다시 입력하세요.")
+                    continue
+                
+                if choice not in ['1', '2', '3', '4', '5']:
+                    print("오류: 1부터 5 사이의 숫자를 입력하세요.")
+                    continue
+                
+                return choice
+            
+            except (KeyboardInterrupt, EOFError):
+                return None
+            
+        
+    # ---------- 데이터 로드 ----------
+    def load_data(self):
+        try:
+            self.quizzes = load_quiz_data(self.quiz_file)
+            self.score_data = load_score(self.score_file)
+        except Exception as e:
+            print(f"⚠️ 데이터 로드 실패: {e}")
 
-    question = get_string_input("문제 내용을 입력하세요: ")
-    if question is None:
-        print("입력 취소")
-        return
+    # ---------- 데이터 저장 ----------
+    def save_data(self):
+        """데이터 저장"""
+        save_quiz_data(self.quizzes, self.quiz_file)
+        save_score(
+            self.score_data["best"],
+            self.score_data["last"],
+            self.score_file
+        )
 
-    choices = []
-    for i in range(1, 5):
-        choice = get_string_input(f"선택지 {i}: ")
-        if choice is None or not choice.strip():
-            print("선택지는 비어 있을 수 없습니다.")
+    # ---------- 퀴즈 풀기 ----------
+    def solve_quiz(self):
+        if not self.quizzes:
+            print("\n⚠️ 퀴즈가 없습니다.")
             return
-        choices.append(choice)
 
-    answer = get_integer_input("정답 번호 (1-4): ", 1, 4)
-    if answer is None:
-        print("입력 취소")
-        return
+        score = 0
 
-    new_id = max([q.id for q in quizzes if hasattr(q, 'id')], default=0) + 1
+        for quiz in self.quizzes:
+            quiz.display()
+            choice = get_integer_input("답: ", 1, 4)
 
-    quiz = Quiz(question, choices, answer, new_id)
+            if choice is None:
+                return
 
-    quizzes.append(quiz)
-    save_quiz_data(quizzes, filename)
+            if quiz.is_correct(choice):
+                print("정답!")
+                score += 1
+            else:
+                print(f"오답! 정답: {quiz.get_correct_text()}")
 
-    print(f"✅ 퀴즈 추가 완료 (id={new_id})")
+        self.update_score(score)
 
-def show_quizzes(quizzes):
-    """저장된 퀴즈 목록을 출력하는 함수"""
-    print("\n=== 퀴즈 목록 ===")
+    # ---------- 점수 갱신 ----------    
+    def update_score(self, score):
+        """점수 갱신"""
+        total = len(self.quizzes)
+        print(f"\n점수: {score}/{total}")
 
-    if not quizzes:
-        print("⚠️ 등록된 퀴즈가 없습니다.")
-        return
+        last = score
+        best = self.score_data["best"]
 
-    for quiz in quizzes:
-        print(quiz.summary())
+        if best is None or score > best:
+            best = score
+            print("🎉 최고 점수 갱신!")
 
-def show_scores(score_data):
-    """점수 출력"""
-    print("\n=== 점수 정보 ===")
+        self.score_data = {"best": best, "last": last}
+        self.save_data()
 
-    best = score_data["best"]
-    last = score_data["last"]
+    # ---------- 퀴즈 추가 ----------
+    def add_quiz(self):
+        print("\n=== 퀴즈 추가 ===")
 
-    if last is None:
-        print("⚠️ 아직 퀴즈를 풀지 않았습니다.")
-        return
+        question = get_string_input("문제 내용을 입력하세요: ")
+        if question is None:
+            print("입력 취소")
+            return
 
-    print(f"📌 이전 점수: {last}")
-    
-    if best is not None:
-        print(f"🏆 최고 점수: {best}")
+        choices = []
+        for i in range(1, 5):
+            choice = get_string_input(f"선택지 {i}: ")
+            if choice is None or not choice.strip():
+                print("선택지는 비어 있을 수 없습니다.")
+                return
+            choices.append(choice)
+
+        answer = get_integer_input("정답 번호 (1-4): ", 1, 4)
+        if answer is None:
+            print("입력 취소")
+            return
+
+        new_id = max([q.id for q in self.quizzes if q.id is not None], default=0) + 1
+
+        quiz = Quiz(question, choices, answer, new_id)
+
+        self.quizzes.append(quiz)
+        self.save_data()
+
+        print(f"✅ 퀴즈 추가 완료 (id={new_id})")
+
+    # ---------- 퀴즈 목록 ----------
+    def show_quizzes(self):
+        print("\n=== 퀴즈 목록 ===")
+
+        if not self.quizzes:
+            print("⚠️ 등록된 퀴즈가 없습니다.")
+            return
+
+        for quiz in self.quizzes:
+            print(quiz.summary())
+
+    # ---------- 점수 ----------
+    def show_scores(self):
+        print("\n=== 점수 정보 ===")
+
+        best = self.score_data["best"]
+        last = self.score_data["last"]
+
+        if last is None:
+            print("⚠️ 아직 퀴즈를 풀지 않았습니다.")
+            return
+
+        print(f"📌 이전 점수: {last}")
+
+        if best is not None:
+            print(f"🏆 최고 점수: {best}")
+
+    # ---------- 실행 ----------
+    def run(self):
+        print("\n프로그램을 시작합니다...\n")
+
+        try:
+            while True:
+                self.display_menu()
+                choice = self.get_menu_choice()
+
+                if choice is None:
+                    break
+
+                if choice == '1':
+                    self.solve_quiz()
+
+                elif choice == '2':
+                    self.add_quiz()
+
+                elif choice == '3':
+                    self.show_quizzes()
+
+                elif choice == '4':
+                    self.show_scores()
+
+                elif choice == '5':
+                    print("\n프로그램을 종료합니다.")
+                    break
+
+        except (KeyboardInterrupt, EOFError):
+            pass
+
+        finally:
+            print("\n⚠️ 프로그램을 종료합니다.")
+            self.save_data()
 
 # ============= 메인 =============
 
 def main():
-    score_data = load_score()
-    print("\n프로그램을 시작합니다...\n")
-    
-    quizzes = load_quiz_data()
-    
-    try:
-        while True:
-            display_menu()
-            choice = get_menu_choice()
-            
-            if choice is None:
-                break
-            
-            if choice == '1':
-                result = solve_quiz(quizzes)
-
-                if result is not None:
-                    last = result
-                    best = score_data["best"]
-
-                    # 최고 점수 갱신
-                    if best is None or result > best:
-                        best = result
-                        print("🎉 최고 점수 갱신!")
-
-                    # 데이터 업데이트
-                    score_data = {"best": best, "last": last}
-
-                    # 파일 저장
-                    save_score(best, last)
-            
-            elif choice == '2':
-                add_quiz(quizzes)
-            
-            elif choice == '3':
-                show_quizzes(quizzes)
-            
-            elif choice == '4':
-                show_scores(score_data)
-            
-            elif choice == '5':
-                print("\n프로그램을 종료합니다.")
-                break
-    
-    except (KeyboardInterrupt, EOFError):
-        pass
-    
-    finally:
-        print("\n⚠️ 프로그램을 종료합니다.")
-        save_quiz_data(quizzes)
-
+    game = QuizGame()
+    game.run()
 
 if __name__ == "__main__":
     main()
