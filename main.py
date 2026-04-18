@@ -164,6 +164,31 @@ def save_quiz_data(quizzes, filename="data.json"):
     except Exception:
         pass
 
+# ============= 점수 관리 함수 =============
+
+def load_score(filename="score.json"):
+    """점수 데이터 로드"""
+    try:
+        if not os.path.exists(filename):
+            return {"best": None, "last": None}
+        
+        with open(filename, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return {
+                "best": data.get("best_score"),
+                "last": data.get("last_score")
+            }
+    except Exception:
+        return {"best": None, "last": None}
+
+
+def save_score(best, last, filename="score.json"):
+    """최고 점수를 저장하는 함수"""
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump({"best_score": best, "last_score": last}, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"⚠️ 점수 저장 실패: {e}")
 
 # ============= 기능 구현 =============
 
@@ -232,11 +257,26 @@ def show_quizzes(quizzes):
     for quiz in quizzes:
         print(quiz.summary())
 
+def show_scores(score_data):
+    """점수 출력"""
+    print("\n=== 점수 정보 ===")
 
+    best = score_data["best"]
+    last = score_data["last"]
+
+    if last is None:
+        print("⚠️ 아직 퀴즈를 풀지 않았습니다.")
+        return
+
+    print(f"📌 이전 점수: {last}")
+    
+    if best is not None:
+        print(f"🏆 최고 점수: {best}")
 
 # ============= 메인 =============
 
 def main():
+    score_data = load_score()
     print("\n프로그램을 시작합니다...\n")
     
     quizzes = load_quiz_data()
@@ -250,7 +290,22 @@ def main():
                 break
             
             if choice == '1':
-                solve_quiz(quizzes)
+                result = solve_quiz(quizzes)
+
+                if result is not None:
+                    last = result
+                    best = score_data["best"]
+
+                    # 최고 점수 갱신
+                    if best is None or result > best:
+                        best = result
+                        print("🎉 최고 점수 갱신!")
+
+                    # 데이터 업데이트
+                    score_data = {"best": best, "last": last}
+
+                    # 파일 저장
+                    save_score(best, last)
             
             elif choice == '2':
                 add_quiz(quizzes)
@@ -259,7 +314,7 @@ def main():
                 show_quizzes(quizzes)
             
             elif choice == '4':
-                print("\n⚠️ 점수 확인 기능은 현재 비활성화되어 있습니다.")
+                show_scores(score_data)
             
             elif choice == '5':
                 print("\n프로그램을 종료합니다.")
