@@ -37,6 +37,7 @@ EOFError
 
 
 ## 파일 구조
+```
 .
 ├── README.md
 ├── main.py
@@ -52,7 +53,7 @@ EOFError
 │   ├── quiz_score.png
 │   └── user.png
 └── state.json
-
+```
 
 ## 데이터 파일 설명(state.json 등)
 - 퀴즈 데이터 저장
