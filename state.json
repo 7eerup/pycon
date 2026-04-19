@@ -54,19 +54,8 @@
         "function"
       ],
       "answer": 3
-    },
-    {
-      "id": 6,
-      "question": "다음 파이썬 데이터 기본 료형 아닌것은?",
-      "choices": [
-        "int",
-        "str",
-        "float",
-        "char"
-      ],
-      "answer": 4
     }
   ],
-  "best_score": 6,
-  "last_score": 6
+  "best_score": null,
+  "last_score": null
 }
